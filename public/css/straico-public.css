@@ -1,0 +1,253 @@
+/**
+ * Public-facing styles for the Straico Integration plugin.
+ *
+ * @since      1.0.0
+ * @package    Straico_Integration
+ * @subpackage Straico_Integration/public/css
+ */
+
+/* Container */
+.straico-prompt-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Form */
+.straico-prompt-form {
+    margin-bottom: 20px;
+}
+
+.straico-prompt-input {
+    margin-bottom: 15px;
+}
+
+.straico-prompt-input textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.5;
+}
+
+.straico-prompt-input textarea:focus {
+    outline: none;
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+/* Buttons */
+.straico-prompt-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.straico-submit-button,
+.straico-reset-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.straico-submit-button {
+    background: #2271b1;
+    color: #fff;
+}
+
+.straico-submit-button:hover {
+    background: #135e96;
+}
+
+.straico-reset-button {
+    background: #6c757d;
+    color: #fff;
+}
+
+.straico-reset-button:hover {
+    background: #5a6268;
+}
+
+.straico-submit-button:disabled,
+.straico-reset-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Loading State */
+.straico-loading {
+    display: none;
+    text-align: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    color: #666;
+}
+
+/* Error State */
+.straico-error {
+    display: none;
+    padding: 10px;
+    margin-bottom: 15px;
+    background: #f8d7da;
+    border-radius: 4px;
+    color: #721c24;
+}
+
+/* Response */
+.straico-response {
+    display: none;
+    margin-top: 20px;
+}
+
+.straico-response-answer {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.straico-response-references {
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+    margin-top: 15px;
+}
+
+.straico-response-references h3 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.straico-reference {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.straico-reference-content {
+    white-space: pre-wrap;
+    line-height: 1.5;
+    margin-bottom: 5px;
+}
+
+.straico-reference-page {
+    font-size: 12px;
+    color: #666;
+}
+
+.straico-response-cost {
+    margin-top: 15px;
+    text-align: right;
+    font-size: 14px;
+    color: #666;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .straico-prompt-container {
+        background: #1f2937;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .straico-prompt-input textarea {
+        background: #374151;
+        border-color: #4b5563;
+        color: #e5e7eb;
+    }
+
+    .straico-prompt-input textarea:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 1px #60a5fa;
+    }
+
+    .straico-loading {
+        background: #374151;
+        color: #e5e7eb;
+    }
+
+    .straico-error {
+        background: #7f1d1d;
+        color: #fecaca;
+    }
+
+    .straico-reference {
+        background: #374151;
+        border-color: #4b5563;
+        color: #e5e7eb;
+    }
+
+    .straico-reference-page {
+        color: #9ca3af;
+    }
+
+    .straico-response-cost {
+        color: #9ca3af;
+    }
+}
+
+/* Responsive Design */
+@media screen and (max-width: 600px) {
+    .straico-prompt-container {
+        margin: 10px;
+        padding: 15px;
+    }
+
+    .straico-prompt-actions {
+        flex-direction: column;
+    }
+
+    .straico-submit-button,
+    .straico-reset-button {
+        width: 100%;
+    }
+}
+
+/* RTL Support */
+.rtl .straico-prompt-container {
+    direction: rtl;
+}
+
+.rtl .straico-response-cost {
+    text-align: left;
+}
+
+/* Accessibility */
+.straico-prompt-input textarea:focus-visible {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+}
+
+.straico-submit-button:focus-visible,
+.straico-reset-button:focus-visible {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+}
+
+/* Print Styles */
+@media print {
+    .straico-prompt-container {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+
+    .straico-prompt-form,
+    .straico-prompt-actions {
+        display: none;
+    }
+
+    .straico-response {
+        display: block !important;
+    }
+}

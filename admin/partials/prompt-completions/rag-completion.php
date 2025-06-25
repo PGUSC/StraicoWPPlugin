@@ -1,0 +1,537 @@
+<?php
+/**
+ * Admin RAG prompt completion page template.
+ *
+ * This template displays the form for submitting RAG prompt completions in the WordPress admin area.
+ *
+ * @since      1.0.0
+ * @package    Straico_Integration
+ * @subpackage Straico_Integration/admin/partials/prompt-completions
+ */
+
+// If this file is called directly, abort.
+if (!defined('WPINC')) {
+    die;
+}
+
+// Get list of RAGs
+$rag_api = new Straico_RAG_API();
+$rags = $rag_api->list_rags();
+
+// Get models API instance for LLM options
+$models_api = new Straico_Models_API();
+$models = $models_api->get_models();
+?>
+
+<div class="wrap">
+    <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+
+    <div class="straico-prompt-completion">
+        <?php if (is_wp_error($rags)) : ?>
+            <div class="notice notice-error">
+                <p><?php echo esc_html($rags->get_error_message()); ?></p>
+            </div>
+        <?php elseif (empty($rags['data'])) : ?>
+            <div class="notice notice-info">
+                <p>
+                    <?php
+                    printf(
+                        /* translators: %s: create RAG URL */
+                        __('No RAGs found. <a href="%s">Create a RAG</a> first.', 'straico-integration'),
+                        esc_url(admin_url('admin.php?page=straico-create-rag'))
+                    );
+                    ?>
+                </p>
+            </div>
+        <?php else : ?>
+            <form method="post" class="straico-prompt-form">
+                <?php wp_nonce_field('straico_rag_prompt', 'straico_nonce'); ?>
+                <input type="hidden" name="action" value="straico_rag_prompt">
+
+                <div class="straico-form-section">
+                    <h2><?php _e('RAG Selection', 'straico-integration'); ?></h2>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="rag_id">
+                                    <?php _e('RAG', 'straico-integration'); ?>
+                                    <span class="required">*</span>
+                                </label>
+                            </th>
+                            <td>
+                                <select id="rag_id" 
+                                        name="rag_id" 
+                                        class="regular-text" 
+                                        required
+                                >
+                                    <option value=""><?php _e('Select a RAG...', 'straico-integration'); ?></option>
+                                    <?php foreach ($rags['data'] as $rag) : ?>
+                                        <?php $formatted = $rag_api->format_rag_info($rag); ?>
+                                        <option value="<?php echo esc_attr($formatted['id']); ?>"
+                                                data-files="<?php echo esc_attr(implode(', ', $formatted['original_files'])); ?>"
+                                        >
+                                            <?php echo esc_html($formatted['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <p class="description straico-rag-files"></p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="straico-form-section">
+                    <h2><?php _e('Model Selection', 'straico-integration'); ?></h2>
+                    <?php if (is_wp_error($models)) : ?>
+                        <div class="notice notice-error inline">
+                            <p><?php echo esc_html($models->get_error_message()); ?></p>
+                        </div>
+                    <?php else : ?>
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row">
+                                    <label for="model">
+                                        <?php _e('Model', 'straico-integration'); ?>
+                                        <span class="required">*</span>
+                                    </label>
+                                </th>
+                                <td>
+                                    <select id="model" 
+                                            name="model" 
+                                            class="regular-text" 
+                                            required
+                                    >
+                                        <option value=""><?php _e('Select a model...', 'straico-integration'); ?></option>
+                                        <?php foreach ($models['data']['chat'] as $model) : ?>
+                                            <option value="<?php echo esc_attr($model['model']); ?>"
+                                                    data-limit="<?php echo esc_attr($model['word_limit']); ?>"
+                                                    data-cost="<?php echo esc_attr($model['pricing']['coins']); ?>"
+                                            >
+                                                <?php echo esc_html($model['name']); ?>
+                                                <?php
+                                                printf(
+                                                    /* translators: 1: word limit 2: coins per 100 words */
+                                                    __('(Limit: %1$s words, Cost: %2$s coins/100 words)', 'straico-integration'),
+                                                    number_format($model['word_limit']),
+                                                    number_format($model['pricing']['coins'], 2)
+                                                );
+                                                ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                        </table>
+                    <?php endif; ?>
+                </div>
+
+                <div class="straico-form-section">
+                    <h2><?php _e('Prompt', 'straico-integration'); ?></h2>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="prompt_message">
+                                    <?php _e('Message', 'straico-integration'); ?>
+                                    <span class="required">*</span>
+                                </label>
+                            </th>
+                            <td>
+                                <textarea id="prompt_message" 
+                                          name="prompt" 
+                                          class="large-text code" 
+                                          rows="5" 
+                                          required
+                                ></textarea>
+                                <p class="description">
+                                    <?php _e('Enter your prompt message.', 'straico-integration'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="straico-form-section">
+                    <h2><?php _e('Search Options', 'straico-integration'); ?></h2>
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="search_type">
+                                    <?php _e('Search Type', 'straico-integration'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <select id="search_type" 
+                                        name="search_type" 
+                                        class="regular-text"
+                                >
+                                    <option value="similarity"><?php _e('Similarity', 'straico-integration'); ?></option>
+                                    <option value="mmr"><?php _e('Maximum Marginal Relevance (MMR)', 'straico-integration'); ?></option>
+                                    <option value="similarity_score_threshold"><?php _e('Similarity Score Threshold', 'straico-integration'); ?></option>
+                                </select>
+                                <p class="description straico-search-description">
+                                    <?php _e('Basic similarity search between the query and documents.', 'straico-integration'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="k">
+                                    <?php _e('Number of Results (k)', 'straico-integration'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input type="number" 
+                                       id="k" 
+                                       name="k" 
+                                       class="small-text" 
+                                       value="4" 
+                                       min="1"
+                                >
+                                <p class="description">
+                                    <?php _e('Number of documents to return.', 'straico-integration'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr class="straico-mmr-options" style="display: none;">
+                            <th scope="row">
+                                <label for="fetch_k">
+                                    <?php _e('Fetch k', 'straico-integration'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input type="number" 
+                                       id="fetch_k" 
+                                       name="fetch_k" 
+                                       class="small-text" 
+                                       value="20" 
+                                       min="1"
+                                >
+                                <p class="description">
+                                    <?php _e('Number of documents to pass to MMR algorithm.', 'straico-integration'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr class="straico-mmr-options" style="display: none;">
+                            <th scope="row">
+                                <label for="lambda_mult">
+                                    <?php _e('Lambda Multiplier', 'straico-integration'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input type="number" 
+                                       id="lambda_mult" 
+                                       name="lambda_mult" 
+                                       class="small-text" 
+                                       value="0.5" 
+                                       min="0" 
+                                       max="1" 
+                                       step="0.1"
+                                >
+                                <p class="description">
+                                    <?php _e('Diversity of results (0-1). 0 for maximum diversity, 1 for minimum.', 'straico-integration'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr class="straico-threshold-options" style="display: none;">
+                            <th scope="row">
+                                <label for="score_threshold">
+                                    <?php _e('Score Threshold', 'straico-integration'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input type="number" 
+                                       id="score_threshold" 
+                                       name="score_threshold" 
+                                       class="small-text" 
+                                       value="0.5" 
+                                       min="0" 
+                                       max="1" 
+                                       step="0.1"
+                                >
+                                <p class="description">
+                                    <?php _e('Minimum relevance threshold (0-1).', 'straico-integration'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="straico-form-actions">
+                    <button type="submit" class="button button-primary">
+                        <?php _e('Submit Prompt', 'straico-integration'); ?>
+                    </button>
+                    <button type="reset" class="button">
+                        <?php _e('Reset', 'straico-integration'); ?>
+                    </button>
+                    <div class="straico-loading" style="display: none;">
+                        <?php _e('Processing prompt...', 'straico-integration'); ?>
+                    </div>
+                    <div class="straico-error" style="display: none;"></div>
+                </div>
+            </form>
+
+            <div class="straico-response" style="display: none;">
+                <div class="straico-response-header">
+                    <h2><?php _e('Response', 'straico-integration'); ?></h2>
+                    <button type="button" class="button straico-reset-prompt">
+                        <?php _e('New Prompt', 'straico-integration'); ?>
+                    </button>
+                </div>
+                <div class="straico-response-content"></div>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<style>
+.straico-prompt-completion {
+    margin-top: 1em;
+}
+
+.straico-form-section {
+    margin: 2em 0;
+    padding: 1em;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.straico-form-section h2 {
+    margin-top: 0;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid #eee;
+}
+
+.required {
+    color: #dc3232;
+}
+
+.straico-form-actions {
+    margin: 2em 0;
+}
+
+.straico-form-actions .button {
+    margin-right: 0.5em;
+}
+
+.straico-loading,
+.straico-error {
+    margin-top: 1em;
+    padding: 1em;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.straico-error {
+    color: #dc3232;
+    background: #f8d7da;
+}
+
+.straico-response {
+    margin: 2em 0;
+    padding: 1em;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.straico-response-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid #eee;
+}
+
+.straico-response-header h2 {
+    margin: 0;
+    padding: 0;
+}
+
+.straico-response-content {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 1em;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.straico-answer {
+    white-space: pre-wrap;
+    margin-bottom: 1em;
+}
+
+.straico-references {
+    margin-top: 1em;
+    padding-top: 1em;
+    border-top: 1px solid #eee;
+}
+
+.straico-references h3 {
+    margin-top: 0;
+}
+
+.straico-reference {
+    margin-bottom: 1em;
+    padding: 1em;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.straico-reference-content {
+    white-space: pre-wrap;
+}
+
+.straico-reference-page {
+    margin-top: 0.5em;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.straico-usage {
+    margin-top: 1em;
+    padding-top: 1em;
+    border-top: 1px solid #eee;
+    color: #666;
+    font-size: 0.9em;
+}
+</style>
+
+<script>
+jQuery(document).ready(function($) {
+    // Update RAG files description
+    $('#rag_id').on('change', function() {
+        var $selected = $(this).find('option:selected');
+        var files = $selected.data('files');
+        var $description = $('.straico-rag-files');
+
+        if (files) {
+            $description.text('<?php _e('Files:', 'straico-integration'); ?> ' + files);
+        } else {
+            $description.empty();
+        }
+    });
+
+    // Update search type description and options
+    $('#search_type').on('change', function() {
+        var type = $(this).val();
+        var descriptions = {
+            'similarity': '<?php _e('Basic similarity search between the query and documents.', 'straico-integration'); ?>',
+            'mmr': '<?php _e('Maximizes relevance while maintaining diversity in results.', 'straico-integration'); ?>',
+            'similarity_score_threshold': '<?php _e('Returns only documents above a similarity threshold.', 'straico-integration'); ?>'
+        };
+
+        $('.straico-search-description').text(descriptions[type]);
+        $('.straico-mmr-options').toggle(type === 'mmr');
+        $('.straico-threshold-options').toggle(type === 'similarity_score_threshold');
+    });
+
+    // Handle form submission
+    $('.straico-prompt-form').on('submit', function(e) {
+        e.preventDefault();
+
+        var $form = $(this);
+        var $submit = $form.find('button[type="submit"]');
+        var $reset = $form.find('button[type="reset"]');
+        var $loading = $form.find('.straico-loading');
+        var $error = $form.find('.straico-error');
+        var $response = $('.straico-response');
+        var $responseContent = $('.straico-response-content');
+
+        // Reset state
+        $error.hide();
+        $submit.prop('disabled', true);
+        $reset.prop('disabled', true);
+        $loading.show();
+        $response.hide();
+        $responseContent.empty();
+
+        // Submit form via AJAX
+        $.ajax({
+            url: straicoAdmin.ajaxurl,
+            type: 'POST',
+            data: $form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    // Format and display response
+                    var html = '';
+
+                    // Add answer
+                    html += '<div class="straico-answer">' + response.data.response.answer + '</div>';
+
+                    // Add references
+                    if (response.data.response.references && response.data.response.references.length > 0) {
+                        html += '<div class="straico-references">';
+                        html += '<h3><?php _e('References', 'straico-integration'); ?></h3>';
+                        $.each(response.data.response.references, function(i, ref) {
+                            html += '<div class="straico-reference">';
+                            html += '<div class="straico-reference-content">' + ref.page_content + '</div>';
+                            if (ref.page) {
+                                html += '<div class="straico-reference-page">';
+                                html += '<?php _e('Page:', 'straico-integration'); ?> ' + ref.page;
+                                html += '</div>';
+                            }
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                    }
+
+                    // Add usage information
+                    html += '<div class="straico-usage">';
+                    html += '<strong><?php _e('Cost:', 'straico-integration'); ?></strong> ';
+                    html += response.data.response.coins_used.toFixed(2) + ' <?php _e('coins', 'straico-integration'); ?>';
+                    html += '</div>';
+
+                    $responseContent.html(html);
+                    $response.show();
+                    $form.hide();
+                } else {
+                    $error.text(response.data.message).show();
+                    $submit.prop('disabled', false);
+                    $reset.prop('disabled', false);
+                }
+                $loading.hide();
+            },
+            error: function() {
+                $error.text('<?php _e('An error occurred. Please try again.', 'straico-integration'); ?>').show();
+                $submit.prop('disabled', false);
+                $reset.prop('disabled', false);
+                $loading.hide();
+            }
+        });
+    });
+
+    // Handle form reset
+    $('.straico-prompt-form button[type="reset"]').on('click', function() {
+        var $form = $(this).closest('form');
+        $form.find('.straico-error').hide();
+        $('.straico-rag-files').empty();
+        $('#search_type').trigger('change');
+    });
+
+    // Handle new prompt button
+    $('.straico-reset-prompt').on('click', function() {
+        $('.straico-prompt-form').show().trigger('reset');
+        $('.straico-response').hide();
+        $('.straico-error').hide();
+        $('.straico-rag-files').empty();
+        $('#search_type').trigger('change');
+    });
+
+    // Initialize search type options
+    $('#search_type').trigger('change');
+});
+</script>
+<script>
+jQuery(document).ready(function($){
+    var data = {
+        action: 'straico_rag_prompt',
+        k: '4',
+        fetch_k: '9',
+        lambda_mult: '0.5'
+    };
+});
+</script>
